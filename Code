@@ -1,0 +1,151 @@
+// $scope, $element, $attrs, $injector, $sce, $timeout, $http, $ionicPopup, and $ionicPopover services are available
+
+
+function magnitute(a1,a2,a3)
+{
+
+return Math.sqrt( Math.pow(a1, 2) + Math.pow(a2, 2)+ Math.pow(a3, 2));
+}
+
+function cross(a1,a2,a3, b1,b2,b3) 
+{
+ return [ a2 * b3 - a3 * b2, a3 * b1 - a1 * b3, a1 * b2 - a2 * b1 ];
+}
+function normalizeVector(a1,a2,a3) {
+    var mag = magnitute(a1,a2,a3)
+    return new Vector(a1/mag, a2/mag, a3/mag);
+};
+
+/////////////////////////////////////////////////////
+var DBL_EPSILON=0.000001
+
+function lcs2Euler(X1x, X1y, X1z,
+                   Y1x, Y1y, Y1z,
+                   Z1x, Z1y, Z1z) 
+
+{ var pre=0;
+  var nut=0;
+  var rot=0;
+ 
+ var X1= magnitute(X1x,X1y,X1z)
+ var Y1= magnitute(Y1x,Y1y,Y1z)
+ var Z1= magnitute(Z1x,Z1y,Z1z)
+
+          var Z1xy = MATH.sqrt(Z1[0] * Z1[0] + Z1[1] * Z1[1]);
+    if (Z1xy > DBL_EPSILON) {
+        pre = MATH.atan2(Y1[0] * Z1[1] - Y1[1]*Z1[0], X1[0] * Z1[1] - X1[1] * Z1[0]);
+        nut = MATH.atan2(Z1xy, Z1[2]);
+        rot = -MATH.atan2(-Z1[0], Z1[1]);
+    }
+    else {
+        pre = 0.;
+        nut = (Z1[2] > 0.) ? 0. : MATH.PI;
+        rot = -MATH.atan2(X1[1], X1[0]);
+    }
+  var ret=new Vector(pre,nut,rot);
+ return ret;
+}
+////////////////////////////////////////////////////////////
+$scope.InfoDanger=false;
+$scope.stop=undefined;
+$scope.distance=0;
+/////////////////////////////////////
+$rootScope.$on('modelLoaded', function() { 
+ 
+    
+   $scope.setWidgetProp('3DContainer-1','enabletrackingevents',true);
+  console.log("now check again the setting of the envronment")
+  console.warn($scope.app.view.Home.wdg['3DContainer-1'].enabletrackingevents)
+   $scope.view.wdg['InfoDanger']['visble']  = true;
+      $scope.view.wdg['InfoDanger']['class']  = "ptc-3DLabeln"; 
+      $scope.view.wdg['InfoDanger']['scale']  = 0.3;
+  
+  //// end of modelLoaded
+});
+//=============================================================
+ $rootScope.$on('tracking', function( tracker,fargs  ) {
+  
+  console.warn(fargs.position);
+ 
+   $scope.view.wdg['eyeposition']['text'] ="eyeposition=("+fargs.position[0].toFixed(2)+","+fargs.position[1].toFixed(2)+","+fargs.position[2].toFixed(2)+")";
+   $scope.view.wdg['eyedir']['text'] ="eyedir=("+fargs.gaze[0].toFixed(2)+","+fargs.gaze[1].toFixed(2)+","+fargs.gaze[2].toFixed(2)+")";
+   $scope.view.wdg['eyeup']['text'] ="eyeup =("+fargs.up[0].toFixed(2)+","+ fargs.up[1].toFixed(2)+","+fargs.up[2].toFixed(2)+")";
+   
+   console.info("distance to 0,0,0 World CSYS = :: "+magnitute(fargs.position[0].toFixed(2),fargs.position[1].toFixed(2),fargs.position[2].toFixed(2)) )
+   //$scope.setWidgetProp('InfoDanger', 'text',"distance to 0,0,0 =  "+magnitute(fargs.position[0].toFixed(2),fargs.position[1].toFixed(2),fargs.position[2].toFixed(2)));
+   var magn=magnitute(fargs.position[0].toFixed(2),fargs.position[1].toFixed(2),fargs.position[2].toFixed(2))
+   $scope.setWidgetProp('InfoDanger', 'text',"Distance  =  "+Number(magn).toFixed(3));
+   $scope.InfoDanger=(magn<1)?true:false;
+   $scope.distance=magn
+   console.log("trackiing :: magn="+magn)
+   $scope.$applyAsync();
+});
+
+$scope.$watch('distance', function (newValue, oldValue, scope) {
+// $scope.view.wdg['InfoDanger']['text']  = "Distance="+Number(scope.distance).toFixed(3); 
+   
+    if(scope.InfoDanger)
+      /***blick function, does not work fine with spatial target
+       {
+       if(!angular.isDefined( $scope.stop))
+         
+      		 $scope.stop =$interval(function() {
+         
+          $timeout( function() {$scope.view.wdg['InfoDanger']['class']  = "ptc-3DLabelDan"; 
+                                $scope.view.wdg['InfoDanger']['scale']  = 0.6; $scope.$applyAsync();
+                               }, 5)
+          $timeout( function() {$scope.view.wdg['InfoDanger']['class']  = "ptc-3DLabel1";  
+                               $scope.view.wdg['InfoDanger']['scale']  = 0.3; $scope.$applyAsync();
+                               }, 305)
+      },600)  } ****/
+      $timeout( function() {$scope.view.wdg['InfoDanger']['class']  = "ptc-3DLabelDan"; 
+                            $scope.view.wdg['InfoDanger']['scale']  = 0.6; $scope.$applyAsync();
+                               }, 5)
+     else
+     { /***if (angular.isDefined( $scope.stop)) {$interval.cancel($scope.stop);$scope.stop=undefined;}***/
+      $timeout( function() {
+      $scope.view.wdg['InfoDanger']['visble']  = true;
+      $scope.view.wdg['InfoDanger']['class']  = "ptc-3DLabeln"; 
+      $scope.view.wdg['InfoDanger']['scale']  = 0.3; $scope.$applyAsync();  },5)}
+})
+
+///////////////////////////////////////////////////////////////
+
+$scope.warningPopup = null;  // Variable to hold the reference to the popup
+
+$scope.$watch('distance', function (newValue, oldValue, scope) {
+    // Update UI for danger indication
+    if(scope.InfoDanger) {
+        $timeout(function() {
+            $scope.view.wdg['InfoDanger']['class'] = "ptc-3DLabelDan"; 
+            $scope.view.wdg['InfoDanger']['scale'] = 0.6;
+            $scope.$applyAsync();
+        }, 5);
+    } else {
+        $timeout(function() {
+            $scope.view.wdg['InfoDanger']['visble'] = true;
+            $scope.view.wdg['InfoDanger']['class'] = "ptc-3DLabeln"; 
+            $scope.view.wdg['InfoDanger']['scale'] = 0.3;
+            $scope.$applyAsync();
+        }, 5);
+    }
+
+    // Check if distance is less than or equal to 0.8 (danger zone)
+    if (newValue <= 0.8) {
+        if (!$scope.warningPopup) {  // Only show popup if it's not already shown
+            $scope.warningPopup = $ionicPopup.alert({
+                title: 'Warning!',
+                template: 'You are getting too close! Distance: ' + newValue.toFixed(3)
+            });
+        }
+    } 
+    // If distance is greater than 0.8 (safe zone), close the popup if it's open
+    else {
+        if ($scope.warningPopup) {
+            $scope.warningPopup.close();  // Close the popup
+            $scope.warningPopup = null;   // Reset the reference
+        }
+    }
+});
+
+
